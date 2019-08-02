@@ -120,6 +120,22 @@ class dset:
         """
         self.train_set, self.test_set = sklearn.model_selection.train_test_split(self.data, test_size=train_test_split,
                                                                                  shuffle=shuffle_split, random_state=seed)
+        self.labels_train = self.train_set[self.target]
+        try:
+            # if dataframe has on column that it's shape is (x,), which causes tuple index error
+            if self.labels_train.shape[1] > 1:
+                # convert from one-hot vectors to labels
+                self.labels_train = self.labels_train.dot(self.labels_train.columns)
+        except:
+            pass
+
+        self.labels_test = self.test_set[self.target]
+        try:
+            if self.labels_test.shape[1] > 1:
+                # convert from one-hot vectors to labels
+                self.labels_test = self.labels_test.dot(self.labels_test.columns)
+        except:
+            pass
         return self
 
     @log_history
@@ -231,6 +247,7 @@ class dset:
                             kwargs={}):
         if columns is None:
             columns = list(self.data.columns[self.data.dtypes == object])
+            # columns = [c for c in self.data.columns if any([isinstance(c,o) for o in  [object, pd.api.types.CategoricalDtype]])]
         if (exclude_target_column):
             columns.remove(self.target)
         prefix = columns
@@ -295,19 +312,4 @@ class dset:
 
 
 if __name__ == "__main__":
-    file = r'C:\Users\i503207\Documents\RompetrolCloudPoint\CloudPointTrain.xlsx'
-
-    ds = dset(file, target="target", id="id", header=0,
-              # variables=['feat1', 'feat13', 'feat15', 'feat17']
-              )
-    (ds
-     .remove_nan_rows(columns=[ds.target], any_nan=True)
-     .remove_nan_columns(any_nan=True)
-     # .split_train_test_sets(train_test_split=0.3)
-     .normalize(type='unitnorm')
-     .summary()
-     )
-
-    # ds.data.plot(x='feat1', y='feat13', kind='scatter')
-    ds.tsne_fit('data', n_components=2).plot_tsne(color_by='target')
-    # ds.tsne_fit('data',n_components=3).tsne_plot(color_by='target')
+    pass

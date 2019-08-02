@@ -2,9 +2,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 from sklearn.metrics import confusion_matrix
 from sklearn.utils.multiclass import unique_labels
 
+def colorbar_index(ncolors, cmap):
+    cmap = cmap_discretize(cmap, ncolors)
+    mappable = cm.ScalarMappable(cmap=cmap)
+    mappable.set_array([])
+    mappable.set_clim(-0.5, ncolors+0.5)
+    colorbar = plt.colorbar(mappable)
+    colorbar.set_ticks(np.linspace(0, ncolors, ncolors))
+    colorbar.set_ticklabels(range(ncolors))
+    return colorbar
 
 def cmap_discretize(cmap, N):
     """Return a discrete colormap from the continuous colormap cmap.
@@ -21,7 +32,7 @@ def cmap_discretize(cmap, N):
     for ki, key in enumerate(('red', 'green', 'blue')):
         cdict[key] = [(indices[i], colors_rgba[i - 1, ki], colors_rgba[i, ki]) for i in range(N + 1)]
     # Return colormap object.
-    return matplotlib.colors.LinearSegmentedColormap(cmap.name + "_%d" % N, cdict, 1024)
+    return matplotlib.colors.LinearSegmentedColormap(cmap.name + "_%d" % N, cdict, N)
 
 def plot_confusion_matrix(y_true, y_pred, classes,
                           normalize=False,
