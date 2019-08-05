@@ -8,6 +8,7 @@ import pandas as pd
 import sklearn.manifold
 import sklearn.model_selection
 import sklearn.preprocessing
+import sklearn.decomposition
 from mltoolbox.misc import plots
 
 if not sys.warnoptions:
@@ -66,6 +67,8 @@ class dset:
         self.test_set = None
         self.scaler = None
         self.scaler_columns = None
+        self.pca_scaler=None
+        self.pca_columns=None
 
         if isinstance(data, pd.DataFrame):
             self.data = data
@@ -226,7 +229,7 @@ class dset:
             # print('\nColumns for normalization not explicitely specified. Will use all columns defined as variables.')
             # columns = self.variables
             print('\nColumns for normalization not explicitely specified. Will use all columns defined as variables.')
-            columns = [c for c in self.data.columns if c not in self.target]
+            columns = self.variables #[c for c in self.data.columns if c not in self.target]
 
 
         self.scaler_columns = columns
@@ -240,6 +243,38 @@ class dset:
                 '\nApplying normalization fitting a scaler to the training dataset and using the same transformation on the test set.')
             self.train_set.loc[:, self.scaler_columns] = self.scaler.fit_transform(self.train_set[self.scaler_columns])
             self.test_set.loc[:, self.scaler_columns] = self.scaler.transform(self.test_set[self.scaler_columns])
+        return self
+
+    @log_history
+    def pca(self,n_components=None, columns=None, seed=0):
+        if columns is None:
+            # print('\nColumns for normalization not explicitely specified. Will use all columns defined as variables.')
+            # columns = self.variables
+            print('\nColumns for PCA not explicitely specified. Will use all columns defined as variables.')
+            columns = self.variables #[c for c in self.data.columns if c not in self.target]
+        self.pca_columns = columns
+
+        self.pca_scaler = sklearn.decomposition.PCA(n_components=n_components,random_state=seed)
+
+        if self.train_set is None:
+            print('\nNo training dataset is defined: applying normalization to the whole dataset. '
+                  '\nYou should not split in train / test datasets after this step.')
+            self.data.loc[:, self.pca_columns] = self.pca_scaler.fit_transform(self.data[self.pca_columns])
+        else:
+            print(
+                '\nApplying normalization fitting a scaler to the training dataset and using the same transformation on the test set.')
+            train_pca = self.pca_scaler.fit_transform(self.train_set[self.pca_columns])
+            test_pca  = self.pca_scaler.transform(self.test_set[self.pca_columns])
+            new_columns = ['pca' + str(i) for i in range(n_components)]
+        self.train_set = self.train_set.drop(columns=self.pca_columns)
+        # self.train_set[new_columns] = train_pca
+        self.train_set = pd.DataFrame(np.hstack([self.train_set.values, train_pca]), columns=self.target + new_columns,
+                     index=self.train_set.index)
+        self.test_set = self.test_set.drop(columns=self.pca_columns)
+        # self.test_set[new_columns] = train_pca
+        self.test_set = pd.DataFrame(np.hstack([self.test_set.values, test_pca]), columns=self.target + new_columns,
+                     index=self.test_set.index)
+        self.variables = new_columns
         return self
 
     @log_history

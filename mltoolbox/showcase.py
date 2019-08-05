@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
 
         ptsne = Ptsne(ds, perplexities=None, n_components=2, kwargs={'batch_size' :256})
-        ptsne.fit_ptsne(epochs=10000)  # , kwargs={'verbose' : True})
+        ptsne.fit_ptsne(epochs=10000, kwargs={'verbose' : True})
         ptsne.transform_ptsne()
         ptsne.plot2d()
 
@@ -143,6 +143,7 @@ if __name__ == '__main__':
                                y_test=ptsne.labels_test,
                                n_iter=25)
                 .run()
+                .plot_comparison(mesh_resolution=None)
                 .summary()
                 )
         hopt.get_best_algorithm()
@@ -167,37 +168,34 @@ if __name__ == '__main__':
             '''
         )
 
-        data = sns.load_dataset('iris')
-        ds = dset(data, target=["species"], header=0, target_type='' )
+        # data = sns.load_dataset('iris')
+        # ds = dset(data, target=["species"], header=0, target_type='' )
+
+        from sklearn.datasets import make_classification
+        X1, Y1 = make_classification(n_samples=1000, n_features=10, n_redundant=4, n_informative=6,
+                                     n_clusters_per_class=1, n_classes=4)
+        data = pd.DataFrame(X1, columns=['feat' + str(i) for i in range(X1.shape[1])])
+        data_labels = pd.DataFrame(Y1, columns=['target'])
+        data = data.join(data_labels)
+        ds = dset(data, target=["target"], header=0, target_type='')
 
 
         (ds
          .remove_nan_rows(columns=[ds.target], any_nan=True)
          .remove_nan_columns(any_nan=True)
          .categorical2numeric(exclude_target_column=False)
-         .split_train_test_sets(train_test_split=0.5, shuffle_split=True, seed=0)
+         .split_train_test_sets(train_test_split=0.7, shuffle_split=True, seed=0)
          .normalize(type='unitnorm')
          .summary()
          )
 
 
-        variables = [c for c in ds.data.columns if c not in ds.target]
-        hopt_regular = (Hyperoptimizer(candidates=candidates, type='classification',
-                               x_train=ds.train_set[variables],
-                               y_train=ds.labels_train,
-                               x_test=ds.test_set[variables],
-                               y_test=ds.labels_test,
-                               n_iter=20)
-                .run()
-                .summary()
-                )
-
-
-
         t = TsneClassifier(input_dset=ds,  n_components=2, perplexity=10, early_exaggeration=12, n_iter=10000, random_state=0)
-        t.tsne_fit()
+        t.tsne_fit( )
         t.plot_tsne_fit()
-        t.fit(epochs=6000)
+        # t.fit(epochs=6000, regularizer=0.01, validation_split=0.2)
+        # t.fit(epochs=10000, hidden_neurons=[10, 10, 10], regularizer=0.1, validation_split=0.2, dropout=0.25)
+        t.fit(epochs=10000, hidden_neurons=[1000,1000],validation_split=0.2, regularizer=0.1, dropout=0.25)
         t.transform2tsne()
 
         le= preprocessing.LabelEncoder()
@@ -218,6 +216,18 @@ if __name__ == '__main__':
                 .run()
                 .plot_comparison(mesh_resolution=None)
                 )
+
+        variables = [c for c in ds.data.columns if c not in ds.target]
+        hopt_regular = (Hyperoptimizer(candidates=candidates, type='classification',
+                               x_train=ds.train_set[variables],
+                               y_train=ds.labels_train,
+                               x_test=ds.test_set[variables],
+                               y_test=ds.labels_test,
+                               n_iter=20)
+                .run()
+                .summary()
+                )
+
 
         print('\n Classification results on high-dimensional dataset  (with hyperoptimization)')
         hopt_regular.summary()

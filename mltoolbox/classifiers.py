@@ -16,15 +16,18 @@ from sklearn.svm import SVC
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
 import sklearn.manifold
 from sklearn.metrics import accuracy_score, mean_squared_error
 from skopt import BayesSearchCV
 from xgboost import XGBClassifier
 from sklearn import preprocessing
 
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense, Dropout
-from keras.callbacks import EarlyStopping
+from keras import regularizers
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+import keras.backend as K
 
 from matplotlib.colors import ListedColormap
 
@@ -36,12 +39,13 @@ from matplotlib.colors import ListedColormap
 from mltoolbox.external.parametric_tsne import parametric_tSNE as ptSNE
 from mltoolbox.external.parametric_tsne.parametric_tSNE.utils import get_multiscale_perplexities
 
-from numpy.random import seed as npseed
-npseed(1)
-from tensorflow import set_random_seed
-set_random_seed(2)
-
 seed = 0
+from numpy.random import seed as npseed
+
+npseed(seed)
+from tensorflow import set_random_seed
+
+set_random_seed(seed)
 
 candidates = {
     'gpc': {
@@ -54,15 +58,13 @@ candidates = {
             },
 
     },
-    # 'svc': {
-    #     'func': SVC(),
-    #     'params':
-    #         {
-    #             'random_state': (seed,),
-    #             'decision_function_shape': ['ovo', 'ovr'],
-    #             'shrinking': [True,False],
-    #         },
-    # },
+    'knn': {
+        'func': KNeighborsClassifier(),
+        'params':
+            {
+                'n_neighbors': (3, 25),
+            },
+    },
     'rf': {
         'func': RandomForestClassifier(),
         'params':
@@ -70,7 +72,7 @@ candidates = {
                 'random_state': (seed,),
                 'n_estimators': (10, 2000),
                 'max_depth': (2, 6),
-                'min_samples_leaf': (1,10),
+                'min_samples_leaf': (1, 10),
             },
 
     },
@@ -88,7 +90,7 @@ candidates = {
             },
 
     },
-    'mlp':{
+    'mlp': {
         'func': MLPClassifier(),
         'params':
             {
@@ -182,9 +184,9 @@ class Hyperoptimizer():
         return self
 
     def get_best_algorithm(self, sort='desc'):
-        if sort=='desc':
+        if sort == 'desc':
             return self.results_table.iloc[0].to_dict()
-        if sort=='asc':
+        if sort == 'asc':
             return self.results_table.iloc[-1].to_dict()
 
     @timing
@@ -201,7 +203,6 @@ class Hyperoptimizer():
         le.fit(self.y_train.values)
         numeric_labels_train = le.transform(self.y_train.values)
         numeric_labels_test = le.transform(self.y_test.values)
-
 
         figure = plt.figure(figsize=(27, 9))
         i = 1
@@ -222,7 +223,7 @@ class Hyperoptimizer():
         ax.set_yticks(())
         ax.set_title("Input data")
         i += 1
-        cont={}
+        cont = {}
         # iterate over classifiers
         for name in list(self.results.keys()):
             ax = plt.subplot(1, len(list(self.results.keys())) + 1, i)
@@ -241,7 +242,7 @@ class Hyperoptimizer():
                 # Put the result into a color plot
                 Z = Z.reshape(xx.shape)
                 ax.contourf(xx, yy, Z, levels=len(np.unique(numeric_labels_train)), cmap=cm, alpha=0.3)
-                cont[name] =Z
+                cont[name] = Z
             except Exception as e:
                 print(e.args[0])
 
@@ -296,13 +297,16 @@ class Ptsne():
     @timing
     def fit_ptsne(self, epochs=20, kwargs={}):
         print('Fitting Parametric t-SNE model.')
-        columns = [c for c in self.data.data.columns if c not in self.data.target]
+        # columns = [c for c in self.data.data.columns if c not in self.data.target]
+        columns = [c for c in self.data.variables if c not in self.data.target]
+
         self.ptsne.fit(training_data=self.data.train_set[columns].values, epochs=epochs, **kwargs)
         return self
 
     @timing
     def transform_ptsne(self, dataset=['train', 'test']):
-        columns = [c for c in self.data.data.columns if c not in self.data.target]
+        # columns = [c for c in self.data.data.columns if c not in self.data.target]
+        columns = [c for c in self.data.variables if c not in self.data.target]
         for d in dataset:
             print('Transforming %s.' % d)
             tmp = getattr(self.data, d + '_set')
@@ -340,9 +344,11 @@ class Ptsne():
                      color=cur_color, label=ci, alpha=alpha)
             color_ix = color_ix + 1
 
+
 class TsneClassifier(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, input_dset, n_components=2, perplexity=30, early_exaggeration=12.0, learning_rate=200.0, n_iter=1000,
+    def __init__(self, input_dset, n_components=2, perplexity=30, early_exaggeration=12.0, learning_rate=200.0,
+                 n_iter=1000,
                  random_state=1):
         self.data = input_dset
         self.n_components = n_components
@@ -364,7 +370,6 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
             # convert from one-hot vectors to labels
             self.labels_test = self.labels_test.dot(self.labels_test.columns)
 
-
     def tsne_fit(self, kwargs={}):
         """
         Fit t-SNE to training dataset
@@ -377,7 +382,8 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
 
         """
         self.tsne_model = sklearn.manifold.TSNE(n_components=self.n_components, perplexity=self.perplexity,
-                                                early_exaggeration=self.early_exaggeration, learning_rate=self.learning_rate,
+                                                early_exaggeration=self.early_exaggeration,
+                                                learning_rate=self.learning_rate,
                                                 n_iter=self.n_iter,
                                                 random_state=self.random_state, **kwargs)
         self.tsne = {'train_set': self.tsne_model.fit_transform(self.data.train_set)}
@@ -402,13 +408,14 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
         le.fit(self.labels_train.values)
         numeric_labels_train = le.transform(self.labels_train.values)
         # numeric_labels_test = le.transform(self.labels_test.values)
-        cmap = plots.cmap_discretize('jet', len(np.unique(self.labels_train.values))+1)
+        cmap = plots.cmap_discretize('jet', len(np.unique(self.labels_train.values)) + 1)
         if self.tsne['train_set'].shape[1] == 2:
             mappable = ax.scatter(self.tsne['train_set'][:, 0], self.tsne['train_set'][:, 1], c=numeric_labels_train,
                                   cmap=cmap)
         if self.tsne['train_set'].shape[1] == 3:
             ax = fig.gca(projection='3d')
-            mappable = ax.scatter(self.tsne['train_set'][:, 0], self.tsne['train_set'][:, 1], self.tsne['train_set'][:, 2],
+            mappable = ax.scatter(self.tsne['train_set'][:, 0], self.tsne['train_set'][:, 1],
+                                  self.tsne['train_set'][:, 2],
                                   c=numeric_labels_train,
                                   cmap=cmap)
         cb = plots.colorbar_index(len(np.unique(self.labels_train.values)), cmap)
@@ -416,25 +423,47 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
         plt.title('TSNE training set')
         plt.tight_layout()
 
-    def init_keras_model(self, hidden_neurons, output_neurons, dropout=None):
+    def euclidean_distance_loss(self, y_true, y_pred):
+        """
+        Euclidean distance loss
+        https://en.wikipedia.org/wiki/Euclidean_distance
+        :param y_true: TensorFlow/Theano tensor
+        :param y_pred: TensorFlow/Theano tensor of the same shape as y_true
+        :return: float
+        """
+        return K.sqrt(K.sum(K.square(y_pred - y_true), axis=-1))
+
+    def init_keras_model(self, hidden_neurons, output_neurons, dropout=None, regularizer=None, activation='relu',
+                         loss='mean_squared_error', metrics=['mse']):
         model = Sequential()
         for hn in hidden_neurons:
-            model.add(Dense(hn, activation='relu'))
+            model.add(Dense(hn, activation=activation))
+            if regularizer is not None:
+                regularizers.l1_l2(l1=regularizer, l2=regularizer)
             if dropout is not None:
                 model.add(Dropout(dropout))
-        model.add(Dense(output_neurons))
-        model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mse'])
+        model.add(Dense(output_neurons, activation='linear'))
+        model.compile(loss=loss, optimizer='adam', metrics=metrics)
         return model
 
     @timing
-    def fit(self, X=None, y=None, hidden_neurons=[500,250,150], output_neurons=2, dropout=None, epochs=1000, batch_size=512, validation_split=None):
-        self.keras_model = self.init_keras_model(hidden_neurons=hidden_neurons, output_neurons=output_neurons, dropout=dropout)
+    def fit(self, X=None, y=None, hidden_neurons=[500, 250, 150], output_neurons=2, dropout=None, epochs=1000,
+            batch_size=512, validation_split=None, regularizer=None, activation='relu', verbose=1,
+            loss='mean_sqared_error', metrics=['mse']):
+        self.keras_model = self.init_keras_model(hidden_neurons=hidden_neurons, output_neurons=output_neurons,
+                                                 dropout=dropout, regularizer=regularizer, activation=activation,loss=loss, metrics=metrics)
         if X is None:
             X = self.data.train_set[self.data.variables].values
         if y is None:
             y = self.tsne['train_set']
-        # es = EarlyStopping(monitor='val_mean_squared_error', mode='min')
-        self.keras_model.fit(x=X,y=y, epochs=epochs, batch_size=batch_size,validation_split=validation_split, shuffle=False) #, callbacks=[es])
+        es = EarlyStopping(monitor='val_loss', mode='min', patience=200, verbose=verbose)
+        mc = ModelCheckpoint('best_tsne_model.h5', monitor='val_loss', mode='min', verbose=verbose,
+                             save_best_only=True)
+        self.keras_model_history = self.keras_model.fit(x=X, y=y, epochs=epochs, batch_size=batch_size,
+                                                        validation_split=validation_split, shuffle=False,
+                                                        callbacks=[es, mc], verbose=verbose)
+        self.keras_model = load_model('best_tsne_model.h5', custom_objects={'euclidean_distance_loss': self.euclidean_distance_loss})
+        os.remove('best_tsne_model.h5')
         return self
 
     def predict(self, X):
@@ -442,20 +471,30 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
 
     def transform2tsne(self):
         self.fitted_train = self.predict(self.data.train_set[self.data.variables].values)
-        self.fitted_test  = self.predict(self.data.test_set[self.data.variables].values)
+        self.fitted_test = self.predict(self.data.test_set[self.data.variables].values)
 
 
 if __name__ == "__main__":
     # file = r'C:\Users\i503207\Documents\RompetrolCloudPoint\CloudPointTrain.xlsx'
 
-    ds = dset(file, target=["target"], id="id", header=0,
-              variables=['feat1', 'feat13', 'feat15', 'feat17']
-              )
+    # ds = dset(file, target=["target"], id="id", header=0,
+    #           variables=['feat1', 'feat13', 'feat15', 'feat17']
+    #           )
+    #
+    # data = sns.load_dataset('iris')
+    # ds = dset(data, target=["species"], header=0, target_type=''
+    #           # variables=['feat1', 'feat13', 'feat15', 'feat17']
+    #           )
 
-    data = sns.load_dataset('iris')
-    ds = dset(data, target=["species"], header=0, target_type=''
-              # variables=['feat1', 'feat13', 'feat15', 'feat17']
-              )
+    from sklearn.datasets import make_classification
+
+    X1, Y1 = make_classification(n_samples=1000, n_features=10, n_redundant=4, n_informative=6,
+                                 n_clusters_per_class=1, n_classes=4)
+    data = pd.DataFrame(X1, columns=['feat' + str(i) for i in range(X1.shape[1])])
+    data_labels = pd.DataFrame(Y1, columns=['target'])
+    data = data.join(data_labels)
+
+    ds = dset(data, target=["target"], header=0, target_type='')
 
     (ds
      .remove_nan_rows(columns=[ds.target], any_nan=True)
@@ -511,21 +550,20 @@ if __name__ == "__main__":
     #         )
     # hopt.get_best_algorithm()
 
-
-    t = TsneClassifier(input_dset=ds,  n_components=2, perplexity=10, early_exaggeration=12, n_iter=10000, random_state=seed)
+    t = TsneClassifier(input_dset=ds, n_components=2, perplexity=10, early_exaggeration=12, n_iter=10000,
+                       random_state=seed)
     t.tsne_fit()
     t.plot_tsne_fit()
-    t.fit(epochs=5000) #, hidden_neurons=[50,100, 150], output_neurons=2, batch_size=1000, dropout=0.25)
+    t.fit(epochs=5000)  # , hidden_neurons=[50,100, 150], output_neurons=2, batch_size=1000, dropout=0.25)
     t.transform2tsne()
 
-    le= preprocessing.LabelEncoder()
+    le = preprocessing.LabelEncoder()
     train_labels = le.fit_transform(t.labels_train.values)
     test_labels = le.fit_transform(t.labels_test.values)
     plt.figure()
-    plt.scatter(t.tsne['train_set'][:, 0], t.tsne['train_set'][:, 1],  c=train_labels)
+    plt.scatter(t.tsne['train_set'][:, 0], t.tsne['train_set'][:, 1], c=train_labels)
     plt.scatter(t.fitted_train[:, 0], t.fitted_train[:, 1], marker='s', c=train_labels)
     plt.scatter(t.fitted_test[:, 0], t.fitted_test[:, 1], marker='d', c=test_labels, edgecolors='k')
-
 
     hopt = (Hyperoptimizer(candidates=candidates, type='classification',
                            x_train=t.fitted_train,
@@ -538,4 +576,3 @@ if __name__ == "__main__":
             )
     hopt.get_best_algorithm()
     cont = hopt.plot_comparison(mesh_resolution=None)
-
