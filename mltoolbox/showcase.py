@@ -1,20 +1,44 @@
-import sys
 import os
+import sys
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from sklearn import preprocessing
-import matplotlib.pyplot as plt
 
 import mltoolbox
+from mltoolbox.algorithms import Hyperoptimizer, Ptsne, TsneMapper, classifier_candidates
+from mltoolbox.datasets import dset
 from mltoolbox.exploration import FacetsExploration
 from mltoolbox.forecasts import ForecastProphet
-from mltoolbox.classifiers import Ptsne, Hyperoptimizer, candidates, TsneClassifier
-from mltoolbox.datasets import dset
+from mltoolbox.misc.generics import timing
 
 if __name__ == '__main__':
 
-    seed =0
+    seed = 1
+
+    # 1. Set `PYTHONHASHSEED` environment variable at a fixed value
+    os.environ['PYTHONHASHSEED'] = str(seed)
+
+    # 2. Set `python` built-in pseudo-random generator at a fixed value
+    import random
+
+    random.seed(seed)
+
+    # 3. Set `numpy` pseudo-random generator at a fixed value
+    import numpy as np
+    np.random.seed(seed)
+
+    # 4. Set `tensorflow` pseudo-random generator at a fixed value
+    import tensorflow as tf
+    tf.set_random_seed(seed)
+
+    # 5. Configure a new global `tensorflow` session
+    from keras import backend as K
+
+    session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+    sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+    K.set_session(sess)
 
     def test1_fbprophet():
         if 'fbprophet' not in sys.modules:
@@ -63,9 +87,8 @@ if __name__ == '__main__':
              .summary()
              )
 
-
             ff = ForecastProphet(
-                input_dset=ds, input_y_column='TotalCount',input_ds_column='index'
+                input_dset=ds, input_y_column='TotalCount', input_ds_column='index'
             )
 
             # ff.add_seasonality(name='monthly', period=12 * 30.5, fourier_order=5)
@@ -74,6 +97,7 @@ if __name__ == '__main__':
             ff.evaluate_train_test()
             ff.prophet.plot_components(ff.forecast)
         return ff
+
 
     def test2_facets():
         print(
@@ -88,8 +112,8 @@ if __name__ == '__main__':
         data = sns.load_dataset('diamonds')
         fo = FacetsExploration(
             input_data={
-                'dataset1': data.sample(n=6000,random_state=0),
-                'dataset2': data.sample(n=9000,random_state=0),
+                'dataset1': data.sample(n=6000, random_state=0),
+                'dataset2': data.sample(n=9000, random_state=0),
             }
         )
         fo.generate_overview_html_string()
@@ -98,6 +122,7 @@ if __name__ == '__main__':
         fo.show(type='overview')
         fo.show(type='dive')
         return fo
+
 
     def test3_ptsne():
         '''
@@ -117,7 +142,9 @@ if __name__ == '__main__':
         '''
         from sklearn.datasets import load_breast_cancer
         data = load_breast_cancer()
-        data = pd.concat([pd.DataFrame(data.data, columns=data.feature_names), pd.DataFrame(data.target, columns=['cancer'])],axis=1)
+        data = pd.concat(
+            [pd.DataFrame(data.data, columns=data.feature_names), pd.DataFrame(data.target, columns=['cancer'])],
+            axis=1)
 
         ds = dset(data, target=["cancer"], header=0, target_type='')
 
@@ -130,13 +157,12 @@ if __name__ == '__main__':
          .summary()
          )
 
-
-        ptsne = Ptsne(ds, perplexities=None, n_components=2, kwargs={'batch_size' :256})
-        ptsne.fit_ptsne(epochs=10000, kwargs={'verbose' : True})
+        ptsne = Ptsne(ds, perplexities=None, n_components=2, kwargs={'batch_size': 256})
+        ptsne.fit_ptsne(epochs=10000, kwargs={'verbose': True})
         ptsne.transform_ptsne()
         ptsne.plot2d()
 
-        hopt = (Hyperoptimizer(candidates=candidates, type='classification',
+        hopt = (Hyperoptimizer(candidates=classifier_candidates, type='classification',
                                x_train=ptsne.fitted_train,
                                y_train=ptsne.labels_train,
                                x_test=ptsne.fitted_test,
@@ -150,8 +176,8 @@ if __name__ == '__main__':
 
         return ptsne, hopt
 
+    @timing
     def test4_tsneclassifier():
-
 
         print(
             '''
@@ -163,13 +189,10 @@ if __name__ == '__main__':
             Once a dataset (train + test) has its dimension reduced, a hyperoptimizer is used to find
             the classifier that best learns the data. 
 
-            Dataset: IRIS dataset from seaborn.
+            Dataset: Generated using sklearn's make_classification: 1000 samples, 4 classes, 10 features (6 information features, 4 redundant features).
             Data split 50%-50% in training / test.
             '''
         )
-
-        # data = sns.load_dataset('iris')
-        # ds = dset(data, target=["species"], header=0, target_type='' )
 
         from sklearn.datasets import make_classification
         X1, Y1 = make_classification(n_samples=1000, n_features=10, n_redundant=4, n_informative=6,
@@ -179,61 +202,68 @@ if __name__ == '__main__':
         data = data.join(data_labels)
         ds = dset(data, target=["target"], header=0, target_type='')
 
-
         (ds
          .remove_nan_rows(columns=[ds.target], any_nan=True)
          .remove_nan_columns(any_nan=True)
          .categorical2numeric(exclude_target_column=False)
-         .split_train_test_sets(train_test_split=0.7, shuffle_split=True, seed=0)
-         .normalize(type='unitnorm')
+         .split_train_test_sets(train_test_split=0.5, shuffle_split=True, seed=0)
+         .normalize(type='robust')
          .summary()
          )
 
+        variables = [c for c in ds.variables if c not in ds.target]
+        hopt_regular = (Hyperoptimizer(candidates=classifier_candidates, type='classification',
+                                       x_train=ds.train_set[variables],
+                                       y_train=ds.labels_train,
+                                       x_test=ds.test_set[variables],
+                                       y_test=ds.labels_test,
+                                       n_iter=20)
+                        .run()
+                        )
 
-        t = TsneClassifier(input_dset=ds,  n_components=2, perplexity=10, early_exaggeration=12, n_iter=10000, random_state=0)
-        t.tsne_fit( )
+        t = TsneMapper(input_dset=ds, n_components=2, perplexity=12, early_exaggeration=12, n_iter=1000,
+                       random_state=0)
+        t.tsne_fit()
         t.plot_tsne_fit()
-        # t.fit(epochs=6000, regularizer=0.01, validation_split=0.2)
-        # t.fit(epochs=10000, hidden_neurons=[10, 10, 10], regularizer=0.1, validation_split=0.2, dropout=0.25)
-        t.fit(epochs=10000, hidden_neurons=[1000,1000],validation_split=0.2, regularizer=0.1, dropout=0.25)
+        t.fit(epochs=1500, hidden_neurons=[200, 200, 200], activation='tanh', dropout=0.25, validation_split=0.2,
+              verbose=0, metrics=[t.euclidean_distance_loss])
         t.transform2tsne()
 
-        le= preprocessing.LabelEncoder()
+        plt.figure()
+        plt.plot(t.keras_model_history.history['loss'],)
+        plt.plot(t.keras_model_history.history['val_loss'])
+        plt.title('Loss')
+        plt.ylabel('Euclidean distance')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'val'], loc='upper right')
+
+        le = preprocessing.LabelEncoder()
         train_labels = le.fit_transform(t.labels_train.values)
         test_labels = le.fit_transform(t.labels_test.values)
         plt.figure()
-        plt.scatter(t.tsne['train_set'][:, 0], t.tsne['train_set'][:, 1],  c=train_labels)
+        plt.scatter(t.tsne['train_set'][:, 0], t.tsne['train_set'][:, 1], c=train_labels)
         plt.scatter(t.fitted_train[:, 0], t.fitted_train[:, 1], marker='s', c=train_labels, edgecolors='r')
         plt.scatter(t.fitted_test[:, 0], t.fitted_test[:, 1], marker='d', c=test_labels, edgecolors='k')
-        plt.title('t-SNE parametrization (circle - tSNE, square - Keras mapping (train), diamond - Keras mapping (test) )')
+        plt.title(
+            't-SNE parametrization (circle - tSNE, square - Keras mapping (train), diamond - Keras mapping (test) )')
 
-        hopt_tsne = (Hyperoptimizer(candidates=candidates, type='classification',
-                               x_train=t.fitted_train,
-                               y_train=t.labels_train,
-                               x_test=t.fitted_test,
-                               y_test=t.labels_test,
-                               n_iter=20, seed=0)
-                .run()
-                .plot_comparison(mesh_resolution=None)
-                )
+        hopt_tsne = (Hyperoptimizer(candidates=classifier_candidates, type='classification',
+                                    x_train=t.fitted_train,
+                                    y_train=t.labels_train,
+                                    x_test=t.fitted_test,
+                                    y_test=t.labels_test,
+                                    n_iter=20, seed=0)
+                     .run()
+                     .plot_comparison(mesh_resolution=None)
+                     )
 
-        variables = [c for c in ds.data.columns if c not in ds.target]
-        hopt_regular = (Hyperoptimizer(candidates=candidates, type='classification',
-                               x_train=ds.train_set[variables],
-                               y_train=ds.labels_train,
-                               x_test=ds.test_set[variables],
-                               y_test=ds.labels_test,
-                               n_iter=20)
-                .run()
-                .summary()
-                )
+
 
 
         print('\n Classification results on high-dimensional dataset  (with hyperoptimization)')
         hopt_regular.summary()
         print('\n Classification results on low-dimensional dataset (with hyperoptimization)')
         hopt_tsne.summary()
-
 
 
     print(
@@ -247,9 +277,3 @@ if __name__ == '__main__':
         test4_tsneclassifier()  for t-SNE classifier and hyperoptimization
         '''
     )
-
-
-
-
-
-

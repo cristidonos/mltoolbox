@@ -47,7 +47,7 @@ from tensorflow import set_random_seed
 
 set_random_seed(seed)
 
-candidates = {
+classifier_candidates = {
     'gpc': {
         'func': GaussianProcessClassifier(),
         'params':
@@ -345,7 +345,7 @@ class Ptsne():
             color_ix = color_ix + 1
 
 
-class TsneClassifier(BaseEstimator, ClassifierMixin):
+class TsneMapper(BaseEstimator, ClassifierMixin):
 
     def __init__(self, input_dset, n_components=2, perplexity=30, early_exaggeration=12.0, learning_rate=200.0,
                  n_iter=1000,
@@ -375,7 +375,8 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
         Fit t-SNE to training dataset
         Parameters
         ----------
-        kwargs
+        kwargs: dict
+            Passed to sklearn.manifold.TSNE
 
         Returns
         -------
@@ -389,12 +390,11 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
         self.tsne = {'train_set': self.tsne_model.fit_transform(self.data.train_set)}
         return self
 
-    def plot_tsne_fit(self, color_by=None):
+    def plot_tsne_fit(self):
         """
         Visualize t-SNE on training dataset
         Parameters
         ----------
-        color_by
 
         Returns
         -------
@@ -402,12 +402,10 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
         """
         fig = plt.figure()
         ax = fig.gca()
-        if color_by is None:
-            color_by = self.data.target
+        color_by = self.data.target
         le = preprocessing.LabelEncoder()
         le.fit(self.labels_train.values)
         numeric_labels_train = le.transform(self.labels_train.values)
-        # numeric_labels_test = le.transform(self.labels_test.values)
         cmap = plots.cmap_discretize('jet', len(np.unique(self.labels_train.values)) + 1)
         if self.tsne['train_set'].shape[1] == 2:
             mappable = ax.scatter(self.tsne['train_set'][:, 0], self.tsne['train_set'][:, 1], c=numeric_labels_train,
@@ -434,7 +432,7 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
         return K.sqrt(K.sum(K.square(y_pred - y_true), axis=-1))
 
     def init_keras_model(self, hidden_neurons, output_neurons, dropout=None, regularizer=None, activation='relu',
-                         loss='mean_squared_error', metrics=['mse']):
+                         metrics=['mse']):
         model = Sequential()
         for hn in hidden_neurons:
             model.add(Dense(hn, activation=activation))
@@ -443,15 +441,15 @@ class TsneClassifier(BaseEstimator, ClassifierMixin):
             if dropout is not None:
                 model.add(Dropout(dropout))
         model.add(Dense(output_neurons, activation='linear'))
-        model.compile(loss=loss, optimizer='adam', metrics=metrics)
+        model.compile(loss=self.euclidean_distance_loss, optimizer='adam', metrics=metrics)
         return model
 
     @timing
     def fit(self, X=None, y=None, hidden_neurons=[500, 250, 150], output_neurons=2, dropout=None, epochs=1000,
             batch_size=512, validation_split=None, regularizer=None, activation='relu', verbose=1,
-            loss='mean_sqared_error', metrics=['mse']):
+            metrics=['mse']):
         self.keras_model = self.init_keras_model(hidden_neurons=hidden_neurons, output_neurons=output_neurons,
-                                                 dropout=dropout, regularizer=regularizer, activation=activation,loss=loss, metrics=metrics)
+                                                 dropout=dropout, regularizer=regularizer, activation=activation, metrics=metrics)
         if X is None:
             X = self.data.train_set[self.data.variables].values
         if y is None:
@@ -550,8 +548,8 @@ if __name__ == "__main__":
     #         )
     # hopt.get_best_algorithm()
 
-    t = TsneClassifier(input_dset=ds, n_components=2, perplexity=10, early_exaggeration=12, n_iter=10000,
-                       random_state=seed)
+    t = TsneMapper(input_dset=ds, n_components=2, perplexity=10, early_exaggeration=12, n_iter=10000,
+                   random_state=seed)
     t.tsne_fit()
     t.plot_tsne_fit()
     t.fit(epochs=5000)  # , hidden_neurons=[50,100, 150], output_neurons=2, batch_size=1000, dropout=0.25)
@@ -565,7 +563,7 @@ if __name__ == "__main__":
     plt.scatter(t.fitted_train[:, 0], t.fitted_train[:, 1], marker='s', c=train_labels)
     plt.scatter(t.fitted_test[:, 0], t.fitted_test[:, 1], marker='d', c=test_labels, edgecolors='k')
 
-    hopt = (Hyperoptimizer(candidates=candidates, type='classification',
+    hopt = (Hyperoptimizer(candidates=classifier_candidates, type='classification',
                            x_train=t.fitted_train,
                            y_train=t.labels_train,
                            x_test=t.fitted_test,
