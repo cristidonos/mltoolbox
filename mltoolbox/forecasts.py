@@ -556,12 +556,15 @@ class ForecastProphet():
                 self.prophet.fit(data)
 
     @timing
-    def predict(self, periods=24, freq='H', include_history=True, on_test_set=True):
+    def predict(self, forecast_schedule=None, periods=24, freq='H', include_history=True, on_test_set=True):
         """
         Predicts n periods in the future and stores them in self.forecast.
 
         Parameters
         ----------
+        forecast_schedule: pandas dataframe
+            Dataframe with 'ds' column containing dates (and times, optionally) to forecast. If not None, will
+            ignore periods, freq, history and test sets.
         periods: Integer
             Number of periods to predict
         freq: String
@@ -572,7 +575,9 @@ class ForecastProphet():
             If True, prediction will be performed on the <test_set> timestamps. Periods will be ignored.
 
         """
-        if on_test_set:
+        if forecast_schedule is not None:
+            new = forecast_schedule
+        elif on_test_set:
             first_date = self.dset.test_set[self.input_ds_column].min()
             last_date = self.dset.test_set[self.input_ds_column].max()
 
@@ -589,6 +594,7 @@ class ForecastProphet():
                 periods=periods, freq=freq, include_history=include_history
             )
         self.forecast = self.prophet.predict(new)
+        self.forecast.index.name = 'indx'
         # if include_history:
         #     self.combined = pd.merge(self.forecast, self.data, on='ds')
         return new
@@ -615,6 +621,21 @@ class ForecastProphet():
     @log_history
     def add_country_holidays(self, country_name='US'):
         self.prophet.add_country_holidays(country_name=country_name)
+
+    @timing
+    def sample_uncertainty(self, forecast_dates = None, nsamples=1000):
+        if self.forecast is None:
+            print("Can't sample uncertainty without fitting and predicting first." )
+            return
+        old_nsamples = self.prophet.uncertainty_samples
+        self.prophet.uncertainty_samples = nsamples
+        if forecast_dates is None:
+            formatted_df = self.prophet.setup_dataframe(self.forecast[['ds']])
+        else:
+            formatted_df = self.prophet.setup_dataframe(forecast_dates)
+        sampled_data = self.prophet.sample_posterior_predictive(formatted_df)['yhat']
+        self.prophet.uncertainty_samples = old_nsamples
+        return sampled_data
 
     def plot_predictions(self):
         """
