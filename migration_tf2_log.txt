@@ -1,0 +1,191 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 20 files
+Detected 1 issues that require attention
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+File: mltoolbox/external\parametric_tsne\parametric_tSNE\core.py
+--------------------------------------------------------------------------------
+mltoolbox/external\parametric_tsne\parametric_tSNE\core.py:499:15: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+================================================================================
+Detailed log follows:
+
+================================================================================
+================================================================================
+Input tree: 'mltoolbox/'
+================================================================================
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/algorithms.py'
+ outputting to 'mltoolbox/algorithms.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/cli.py'
+ outputting to 'mltoolbox/cli.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/datasets.py'
+ outputting to 'mltoolbox/datasets.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/exploration.py'
+ outputting to 'mltoolbox/exploration.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/forecasts.py'
+ outputting to 'mltoolbox/forecasts.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/showcase.py'
+ outputting to 'mltoolbox/showcase.py'
+--------------------------------------------------------------------------------
+
+34:4: INFO: Renamed 'tf.set_random_seed' to 'tf.compat.v1.set_random_seed'
+39:19: INFO: Renamed 'tf.ConfigProto' to 'tf.compat.v1.ConfigProto'
+40:11: INFO: Renamed 'tf.Session' to 'tf.compat.v1.Session'
+40:28: INFO: Renamed 'tf.get_default_graph' to 'tf.compat.v1.get_default_graph'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/__init__.py'
+ outputting to 'mltoolbox/__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\__init__.py'
+ outputting to 'mltoolbox/external\\__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\facets\\base_feature_statistics_generator.py'
+ outputting to 'mltoolbox/external\\facets\\base_feature_statistics_generator.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\facets\\base_generic_feature_statistics_generator.py'
+ outputting to 'mltoolbox/external\\facets\\base_generic_feature_statistics_generator.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\facets\\feature_statistics_generator.py'
+ outputting to 'mltoolbox/external\\facets\\feature_statistics_generator.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\facets\\feature_statistics_pb2.py'
+ outputting to 'mltoolbox/external\\facets\\feature_statistics_pb2.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\facets\\generic_feature_statistics_generator.py'
+ outputting to 'mltoolbox/external\\facets\\generic_feature_statistics_generator.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\parametric_tsne\\__init__.py'
+ outputting to 'mltoolbox/external\\parametric_tsne\\__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\parametric_tsne\\parametric_tSNE\\core.py'
+ outputting to 'mltoolbox/external\\parametric_tsne\\parametric_tSNE\\core.py'
+--------------------------------------------------------------------------------
+
+99:17: INFO: Added keywords to args of function 'tf.shape'
+105:18: INFO: Added keywords to args of function 'tf.transpose'
+108:14: INFO: Added keywords to args of function 'tf.reduce_sum'
+150:9: INFO: Renamed 'tf.matrix_set_diag' to 'tf.linalg.set_diag'
+151:16: INFO: Added keywords to args of function 'tf.reduce_sum'
+151:16: INFO: Renamed keyword argument for tf.reduce_sum from keep_dims to keepdims
+153:19: INFO: Added keywords to args of function 'tf.transpose'
+219:42: INFO: Renamed 'tf.log' to 'tf.math.log'
+219:73: INFO: Renamed 'tf.log' to 'tf.math.log'
+221:23: INFO: Renamed 'tf.matrix_set_diag' to 'tf.linalg.set_diag'
+222:33: INFO: Added keywords to args of function 'tf.reduce_sum'
+275:8: INFO: Renamed 'tf.set_random_seed' to 'tf.compat.v1.set_random_seed'
+499:15: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\parametric_tsne\\parametric_tSNE\\utils.py'
+ outputting to 'mltoolbox/external\\parametric_tsne\\parametric_tSNE\\utils.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/external\\parametric_tsne\\parametric_tSNE\\__init__.py'
+ outputting to 'mltoolbox/external\\parametric_tsne\\parametric_tSNE\\__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/misc\\generics.py'
+ outputting to 'mltoolbox/misc\\generics.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/misc\\plots.py'
+ outputting to 'mltoolbox/misc\\plots.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'mltoolbox/misc\\__init__.py'
+ outputting to 'mltoolbox/misc\\__init__.py'
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
