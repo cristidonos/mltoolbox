@@ -31,13 +31,13 @@ if __name__ == '__main__':
 
     # 4. Set `tensorflow` pseudo-random generator at a fixed value
     import tensorflow as tf
-    tf.set_random_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
 
     # 5. Configure a new global `tensorflow` session
     from keras import backend as K
 
-    session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
-    sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+    session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+    sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
     K.set_session(sess)
 
     def test1_fbprophet():

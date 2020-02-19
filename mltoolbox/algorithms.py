@@ -32,7 +32,7 @@ import keras.backend as K
 from matplotlib.colors import ListedColormap
 
 # package_path = os.path.dirname(mltoolbox.__file__).replace(os.path.sep + 'lib' + os.path.sep,
-#                                                            os.path.sep + 'Lib' + os.path.sep)
+#                 conda                                            os.path.sep + 'Lib' + os.path.sep)
 # sys.path.insert(0, package_path + os.path.join(os.path.sep, 'external', 'parametric_tsne',os.path.sep))
 # import parametric_tSNE as ptSNE
 
@@ -43,9 +43,9 @@ seed = 0
 from numpy.random import seed as npseed
 
 npseed(seed)
-from tensorflow import set_random_seed
+from tensorflow import random
 
-set_random_seed(seed)
+random.set_seed(seed)
 
 classifier_candidates = {
     'gpc': {
