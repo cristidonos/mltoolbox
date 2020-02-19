@@ -11,6 +11,7 @@ requirements = ['Click>=6.0',
                 'xgboost',
                 'keras',
                 'tensorflow',
+                'python-pptx',
                 'nbparameterise @ git+https://github.com/takluyver/nbparameterise.git',
                 ]
 

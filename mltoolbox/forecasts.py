@@ -487,7 +487,7 @@ class ForecastProphet():
         - data transformation logging
     """
 
-    def __init__(self, input_dset, input_ds_column='ds', input_y_column='y'):
+    def __init__(self, input_dset, input_ds_column='ds', input_y_column='y', additional_regressors=None):
         """
 
         Parameters
@@ -498,14 +498,20 @@ class ForecastProphet():
             Name of Date time column
         input_y_column: String
             Name of data column
+        additional_regressors: list of strings
+            List of columns to be used as additional regressors
         """
         self.input_ds_column = input_ds_column
         self.input_y_column = input_y_column
+        self.additional_regressors = additional_regressors
         self.dset = input_dset
         if input_ds_column=='index':
             self.dset.train_set['index'] = self.dset.train_set.index.to_series()
             self.dset.test_set['index']  = self.dset.test_set.index.to_series()
         self.prophet = fbp.Prophet()
+        if additional_regressors is not None:
+            for ar in self.additional_regressors:
+                self.prophet.add_regressor(ar)
         self.forecast = None
         self.combined = None
         self.history = []
@@ -545,7 +551,7 @@ class ForecastProphet():
         """
         # self.prophet.fit(self.data)
         data = pd.DataFrame(
-            self.dset.train_set[[self.input_ds_column, self.input_y_column]].values, columns=['ds', 'y']
+            self.dset.train_set[[self.input_ds_column, self.input_y_column]+ self.additional_regressors].values, columns=['ds', 'y'] + self.additional_regressors
         )
         data = data.astype(dtype={'ds': np.datetime64, 'y': np.float})
 
@@ -563,7 +569,7 @@ class ForecastProphet():
         Parameters
         ----------
         forecast_schedule: pandas dataframe
-            Dataframe with 'ds' column containing dates (and times, optionally) to forecast. If not None, will
+            Dataframe with 'ds' column containing dates (and times, optionally) and any additional regressors to forecast. If not None, will
             ignore periods, freq, history and test sets.
         periods: Integer
             Number of periods to predict
@@ -589,15 +595,27 @@ class ForecastProphet():
                 dates = pd.concat([pd.Series(self.dset.train_set[self.input_ds_column]), pd.Series(dates)])
                 dates = dates.reset_index(drop=True)
             new = pd.DataFrame({'ds': dates})
+            if self.additional_regressors is not None:
+                new = new.set_index(new.ds).join(
+                    pd.concat(
+                        [self.dset.train_set[self.additional_regressors],
+                         self.dset.test_set[self.additional_regressors]]),
+                    how='left').reset_index(drop=True)
         else:
             new = self.prophet.make_future_dataframe(
                 periods=periods, freq=freq, include_history=include_history
             )
+            if self.additional_regressors is not None:
+                new = new.set_index(new.ds).join(
+                    pd.concat(
+                        [self.dset.train_set[self.additional_regressors], self.dset.test_set[self.additional_regressors]]),
+                    how='left').reset_index(drop=True)
         self.forecast = self.prophet.predict(new)
         self.forecast.index.name = 'indx'
         # if include_history:
         #     self.combined = pd.merge(self.forecast, self.data, on='ds')
         return new
+
 
     @log_history
     def add_seasonality(
