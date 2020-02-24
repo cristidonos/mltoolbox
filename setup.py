@@ -2,6 +2,7 @@ from setuptools import setup
 
 
 requirements = ['Click>=6.0',
+                'numpy',
                 'pandas==0.24',
                 'seaborn',
                 'scipy',
