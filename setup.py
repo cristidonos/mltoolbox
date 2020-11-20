@@ -3,7 +3,7 @@ from setuptools import setup
 
 requirements = ['Click>=6.0',
                 'numpy',
-                'pandas==0.24',
+                'pandas>=1.1.4',
                 'seaborn',
                 'scipy',
                 'scikit-learn<=0.20.3',
