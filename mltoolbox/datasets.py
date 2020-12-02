@@ -102,7 +102,7 @@ class dset:
         # self.numeric_variables = [v for v in self.variables if pd.api.types.is_numeric_dtype(self.data[v])]
 
     @log_history
-    def split_train_test_sets(self, train_test_split=0.2, shuffle_split=False, seed=None):
+    def split_train_test_sets(self, train_test_split=0.2, shuffle_split=False, stratify= None, seed=None):
         """
         Split data in train-test sets.
         Parameters
@@ -114,6 +114,8 @@ class dset:
             complement of the train size.
         shuffle_split : bool
             If True, data samples will be shuffled before train-test split.
+        stratify: array or None. If array will be provided, will attempt to preserve the class label ratios in the
+            train-test split.
         seed: int or None
             Random state
 
@@ -122,7 +124,8 @@ class dset:
 
         """
         self.train_set, self.test_set = sklearn.model_selection.train_test_split(self.data, test_size=train_test_split,
-                                                                                 shuffle=shuffle_split, random_state=seed)
+                                                                                 shuffle=shuffle_split, stratify=stratify,
+                                                                                 random_state=seed)
         self.labels_train = self.train_set[self.target]
         try:
             # if dataframe has on column that it's shape is (x,), which causes tuple index error
