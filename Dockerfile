@@ -14,6 +14,8 @@ RUN conda install pandas numpy scipy scikit-learn seaborn jupyter -y \
     && find /opt/conda/ -follow -type f -name '*.pyc' -delete \
     && find /opt/conda/ -follow -type f -name '*.js.map' -delete \
     && find /opt/conda/lib/python*/site-packages/bokeh/server/static -follow -type f -name '*.js' ! -name '*.min.js' -delete
+
 RUN pip install fbprophet
+
 RUN pip install git+https://github.com/cristidonos/mltoolbox
 
