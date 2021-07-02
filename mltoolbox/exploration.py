@@ -104,6 +104,7 @@ class FacetsExploration:
             )
         else:
             htmlfile = os.open(save_to, flags=os.O_RDWR|os.O_CREAT)
+
         htmlfile.write(html_string)
         htmlfile.close()
         webbrowser.open_new(htmlfile.name)
