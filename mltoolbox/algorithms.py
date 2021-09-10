@@ -48,7 +48,7 @@ from tensorflow import random
 try:
     random.set_seed(seed)
 except:
-    randm.set_random_seed(seed)
+    random.set_random_seed(seed)
         
 
 classifier_candidates = {
