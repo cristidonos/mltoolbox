@@ -45,7 +45,11 @@ from numpy.random import seed as npseed
 npseed(seed)
 from tensorflow import random
 
-random.set_seed(seed)
+try:
+    random.set_seed(seed)
+except:
+    random.set_random_seed(seed)
+        
 
 classifier_candidates = {
     'gpc': {

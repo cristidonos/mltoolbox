@@ -103,7 +103,8 @@ class FacetsExploration:
                 mode='wt', suffix='.html', delete=False
             )
         else:
-            htmlfile = os.open(save_to, mode='wt')
+            htmlfile = open(save_to,'wt')
+
         htmlfile.write(html_string)
         htmlfile.close()
         webbrowser.open_new(htmlfile.name)
