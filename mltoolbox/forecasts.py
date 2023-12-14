@@ -12,7 +12,7 @@ from sklearn.metrics import mean_absolute_error as MAE
 from sklearn.model_selection import train_test_split
 
 try:
-    import fbprophet as fbp
+    import prophet as fbp
 except:
     print(
         'fbprophet package is missing: ForecastProphet class will not be available. \n Use "conda install -c conda-forge fbprophet" to install it in the current env.  '
@@ -53,7 +53,7 @@ class ForecastProphet_old():
         self.data = pd.DataFrame(
             input_data[[input_ds_column, input_y_column]].values, columns=['ds', 'y']
         )
-        self.data = self.data.astype(dtype={'ds': np.datetime64, 'y': np.float})
+        self.data = self.data.astype(dtype={'ds': 'datetime64[ns]', 'y': np.float64})
         self.prophet = fbp.Prophet()
         self.forecast = None
         self.combined = None
@@ -550,10 +550,12 @@ class ForecastProphet():
             If True will print fitting details to console.
         """
         # self.prophet.fit(self.data)
+        if self.additional_regressors is None:
+            self.additional_regressors = []
         data = pd.DataFrame(
             self.dset.train_set[[self.input_ds_column, self.input_y_column]+ self.additional_regressors].values, columns=['ds', 'y'] + self.additional_regressors
         )
-        data = data.astype(dtype={'ds': np.datetime64, 'y': np.float})
+        data = data.astype(dtype={'ds': 'datetime64[ns]', 'y': np.float64})
 
         if verbose:
             self.prophet.fit(data)
@@ -819,7 +821,10 @@ class ForecastProphet():
         # train.reset_index(inplace=True)
         # test.reset_index(inplace=True)
         self.forecast.index = self.forecast.ds
-        self.forecast = self.forecast.join(pd.concat([pd.Series(self.dset.train_set[self.input_y_column]), pd.Series(self.dset.test_set[self.input_y_column])]))
+        train_test_concat = pd.concat(
+            [pd.Series(self.dset.train_set[self.input_y_column]), pd.Series(self.dset.test_set[self.input_y_column])])
+        train_test_concat.index = train_test_concat.index.astype('datetime64[ns]')
+        self.forecast = self.forecast.join(train_test_concat)
         self.forecast = self.forecast.rename(columns={self.input_y_column : 'y'})
 
         # Plot predictions on training and test data
